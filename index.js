@@ -89,7 +89,11 @@ function buildPDF(data) {
     tableRow('User', data.userName, false);
     tableRow('Department', data.dept, true);
     tableRow('Device', data.device, false);
-    if (data.notes && data.notes !== '—') tableRow('Notes', data.notes, true);
+    if (data.startTime && data.startTime !== '—') tableRow('Start time', data.startTime, false);
+    if (data.endTime && data.endTime !== '—') tableRow('End time', data.endTime, true);
+    if (data.kmTo && data.kmTo !== '—') tableRow('KMs to site', data.kmTo + ' km', false);
+    if (data.kmFrom && data.kmFrom !== '—') tableRow('KMs from site', data.kmFrom + ' km', true);
+    if (data.notes && data.notes !== '—') tableRow('Notes', data.notes, false);
     y += 8;
 
     // ── Pre-requisites ───────────────────────────────────────────
