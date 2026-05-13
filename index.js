@@ -173,14 +173,18 @@ function buildPDF(data) {
 
       if (sigData[i] && sigData[i].startsWith('data:image')) {
         try {
-          const base64 = sigData[i].replace(/^data:image\/\w+;base64,/, '');
-          const buf = Buffer.from(base64, 'base64');
-          doc.image(buf, L + W * 0.35, y + 6, { height: 56, fit: [200, 56] });
+          const matches = sigData[i].match(/^data:(image\/\w+);base64,(.+)$/);
+          if (matches) {
+            const imgBuf = Buffer.from(matches[2], 'base64');
+            doc.image(imgBuf, L + W * 0.35, y + 7, { fit: [200, 54] });
+          } else {
+            throw new Error('bad data URI');
+          }
         } catch(e) {
-          doc.fillColor('#aaa').font('Helvetica').fontSize(8).text('Signature captured', L + W * 0.35, y + 28);
+          doc.fillColor('#aaa').font('Helvetica').fontSize(8).text('Signature captured digitally', L + W * 0.35, y + 28);
         }
       } else {
-        doc.fillColor('#aaa').font('Helvetica').fontSize(8).text('No signature', L + W * 0.35, y + 28);
+        doc.fillColor('#aaa').font('Helvetica').fontSize(8).text('No signature provided', L + W * 0.35, y + 28);
       }
       y += rowH;
     });
@@ -249,4 +253,3 @@ app.get('/', (req, res) => res.json({ status: 'Netstar sign-off mailer running' 
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Running on port ${PORT}`));
-
