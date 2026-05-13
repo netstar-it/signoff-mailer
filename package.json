@@ -1,13 +1,14 @@
 {
   "name": "signoff-mailer",
-  "version": "1.0.0",
-  "description": "Email proxy for field job sign-off app",
+  "version": "2.0.0",
+  "description": "Netstar device installation sign-off mailer with PDF generation",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "pdfkit": "^0.15.0"
   }
 }
