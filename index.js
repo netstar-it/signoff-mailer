@@ -89,6 +89,8 @@ function buildPDF(data) {
     tableRow('User', data.userName, false);
     tableRow('Department', data.dept, true);
     tableRow('Device', data.device, false);
+    if (data.userPhone && data.userPhone !== '—') tableRow('User contact', data.userPhone, false);
+    if (data.userEmail && data.userEmail !== '—') tableRow('User email', data.userEmail, true);
     if (data.startTime && data.startTime !== '—') tableRow('Start time', data.startTime, false);
     if (data.endTime && data.endTime !== '—') tableRow('End time', data.endTime, true);
     if (data.kmTo && data.kmTo !== '—') tableRow('KMs to site', data.kmTo + ' km', false);
