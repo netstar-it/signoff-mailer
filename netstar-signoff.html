@@ -121,13 +121,14 @@ canvas{display:block;width:100%;height:150px;touch-action:none;cursor:crosshair;
   <div class="page show" id="p0">
     <div class="plabel">Step 1 of 5</div>
     <div class="ptitle">Device & job details</div>
-    <div class="pre-box">
+    <div class="pre-box" id="preBox">
       <div class="pre-title">⚠ Complete before starting</div>
       <div class="pre-item" onclick="togglePre(0)"><div class="pre-cb" id="cb0"></div><span class="pre-lbl">OneDrive backup confirmed</span></div>
       <div class="pre-item" onclick="togglePre(1)"><div class="pre-cb" id="cb1"></div><span class="pre-lbl">User PST files backed up</span></div>
       <div class="pre-item" onclick="togglePre(2)"><div class="pre-cb" id="cb2"></div><span class="pre-lbl">Device joined to Azure / Entra</span></div>
       <div class="pre-item" onclick="togglePre(3)"><div class="pre-cb" id="cb3"></div><span class="pre-lbl">Windows 11 compatible</span></div>
     </div>
+    <div id="preWarning" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:13px;color:#dc2626;font-weight:500;">⚠ Please complete all pre-requisite checks before continuing.</div>
     <div class="row2">
       <div><label>Technician name</label><input id="techName" placeholder="Full name"/></div>
       <div><label>Date</label><input id="jobDate" type="date"/></div>
@@ -160,7 +161,7 @@ canvas{display:block;width:100%;height:150px;touch-action:none;cursor:crosshair;
     <input id="recipEmail" value="stephen.thomas@altron.com" readonly style="background:#f1f5f9;color:#888;cursor:not-allowed;"/>
     <label>Notes</label>
     <textarea id="notes" placeholder="Additional notes..."></textarea>
-    <button class="btn" onclick="goPage(1)">Next — software checklist →</button>
+    <button class="btn" onclick="validateAndNext()">Next — software checklist →</button>
   </div>
 
   <!-- PAGE 1: Checklist -->
@@ -250,6 +251,50 @@ let tPad=null, sPad=null;
 
 document.getElementById('jobDate').valueAsDate = new Date();
 
+// ── Validation ───────────────────────────────────────────────────
+function validateAndNext(){
+  const allChecked = preChecks.every(v => v === true);
+  if(!allChecked){
+    // Highlight unchecked items
+    preChecks.forEach((v,i)=>{
+      const el = document.getElementById('cb'+i);
+      if(!v){
+        el.style.border = '2px solid #dc2626';
+        el.parentElement.style.background = '#FEF2F2';
+      }
+    });
+    // Show warning
+    let warn = document.getElementById('preWarn');
+    if(!warn){
+      warn = document.createElement('p');
+      warn.id = 'preWarn';
+      warn.style.cssText = 'color:#dc2626;font-size:12px;font-weight:600;margin-top:8px;';
+      warn.textContent = '⚠ Please complete all pre-checks before continuing.';
+      document.querySelector('.pre-box').appendChild(warn);
+    }
+    // Scroll to pre-box
+    document.querySelector('.pre-box').scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  // Clear any warnings
+  const warn = document.getElementById('preWarn');
+  if(warn) warn.remove();
+  goPage(1);
+}
+
+// ── Validation ───────────────────────────────────────────────────
+function validateAndNext(){
+  const allChecked = preChecks.every(v => v === true);
+  const warning = document.getElementById('preWarning');
+  if(!allChecked){
+    warning.style.display = 'block';
+    document.getElementById('preBox').scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+  warning.style.display = 'none';
+  goPage(1);
+}
+
 // ── Navigation ────────────────────────────────────────────────────
 function goPage(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
@@ -269,6 +314,18 @@ function togglePre(i){
   const el=document.getElementById('cb'+i);
   el.classList.toggle('on',preChecks[i]);
   el.textContent=preChecks[i]?'✓':'';
+  // Clear red highlight when ticked
+  el.style.border='';
+  el.parentElement.style.background='';
+  // Remove warning if all now checked
+  if(preChecks.every(v=>v)){
+    const warn=document.getElementById('preWarn');
+    if(warn) warn.remove();
+    preChecks.forEach((_,j)=>{
+      const e=document.getElementById('cb'+j);
+      e.style.border=''; e.parentElement.style.background='';
+    });
+  }
 }
 
 // ── Checklist ─────────────────────────────────────────────────────
@@ -394,6 +451,44 @@ function buildReview(){
   h+=`<div class="rv-card" style="margin-bottom:8px;padding:10px 12px;font-size:13px;color:#555;">${sSigned?'✓ Signature captured':'⚠ Not yet signed'}</div>`;
 
   document.getElementById('revArea').innerHTML=h;
+}
+
+// ── Validate pre-checks ──────────────────────────────────────────
+function validateAndNext(){
+  const allChecked = preChecks.every(v => v === true);
+  if(!allChecked){
+    // Highlight unchecked items
+    preChecks.forEach((checked, i) => {
+      const el = document.getElementById('cb'+i);
+      if(!checked){
+        el.style.border = '2px solid #dc2626';
+        el.parentElement.style.background = '#FEF2F2';
+      } else {
+        el.style.border = '';
+        el.parentElement.style.background = '';
+      }
+    });
+    // Show warning
+    let warn = document.getElementById('pre-warn');
+    if(!warn){
+      warn = document.createElement('p');
+      warn.id = 'pre-warn';
+      warn.style.cssText = 'color:#dc2626;font-size:12px;font-weight:600;margin-top:6px;';
+      warn.textContent = '⚠ Please complete all pre-checks before continuing.';
+      document.querySelector('.pre-box').appendChild(warn);
+    }
+    document.querySelector('.pre-box').scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  // All checked — clear any warnings and proceed
+  preChecks.forEach((_, i) => {
+    const el = document.getElementById('cb'+i);
+    el.style.border = '';
+    el.parentElement.style.background = '';
+  });
+  const warn = document.getElementById('pre-warn');
+  if(warn) warn.remove();
+  goPage(1);
 }
 
 // ── Submit ────────────────────────────────────────────────────────
