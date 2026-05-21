@@ -157,6 +157,8 @@ canvas{display:block;width:100%;height:150px;touch-action:none;cursor:crosshair;
     </select>
     <label>Device (make / model / serial)</label>
     <input id="device" placeholder="e.g. Dell Latitude 5540 — SN123456"/>
+    <label>New PC name <span>(hostname after installation)</span></label>
+    <input id="newPcName" placeholder="e.g. NST-DEPT-001"/>
     <label>Recipient email <span>(receives sign-off report)</span></label>
     <input id="recipEmail" value="stephen.thomas@altron.com" readonly style="background:#f1f5f9;color:#888;cursor:not-allowed;"/>
     <label>Notes</label>
@@ -180,6 +182,8 @@ canvas{display:block;width:100%;height:150px;touch-action:none;cursor:crosshair;
     <div class="plabel">Step 3 of 5</div>
     <div class="ptitle">Technician signature</div>
     <p style="font-size:13px;color:#555;margin-bottom:10px;">I confirm the installation was completed as per this checklist.</p>
+    <label>Technician full name</label>
+    <input id="techSigName" placeholder="Full name"/>
     <div class="sig-box">
       <canvas id="tc"></canvas>
       <div class="sig-foot">
@@ -195,7 +199,9 @@ canvas{display:block;width:100%;height:150px;touch-action:none;cursor:crosshair;
     <button class="back-btn" onclick="goPage(2)">← Back</button>
     <div class="plabel">Step 4 of 5</div>
     <div class="ptitle">Supervisor sign-off</div>
-    <p style="font-size:13px;color:#555;margin-bottom:10px;">I confirm and approve this installation is complete.</p>
+    <p style="font-size:13px;color:#555;margin-bottom:10px;">User / supervisor signs to confirm they are satisfied with the completed installation.</p>
+    <label>User / supervisor full name</label>
+    <input id="supSigName" placeholder="Full name of user or supervisor signing"/>
     <div class="sig-box">
       <canvas id="sc"></canvas>
       <div class="sig-foot">
@@ -426,7 +432,7 @@ function buildReview(){
   let h=secHead('Job details', 0);
   h+=`<div class="rv-card" style="margin-bottom:10px;">`;
   const row=(l,v)=>`<div class="rv-row"><span class="rl">${l}</span><span class="rv">${v}</span></div>`;
-  h+=row('Technician',g('techName'))+row('Date',g('jobDate'))+row('Start time',g('startTime'))+row('End time',g('endTime'))+row('KMs to site',g('kmTo')+' km')+row('KMs from site',g('kmFrom')+' km')+row('User',g('userName'))+row('User contact',g('userPhone'))+row('User email',g('userEmail'))+row('Department',g('dept')||'—')+row('Device',g('device'));
+  h+=row('Technician',g('techName'))+row('Date',g('jobDate'))+row('Start time',g('startTime'))+row('End time',g('endTime'))+row('KMs to site',g('kmTo')+' km')+row('KMs from site',g('kmFrom')+' km')+row('User',g('userName'))+row('User contact',g('userPhone'))+row('User email',g('userEmail'))+row('Department',g('dept')||'—')+row('Device',g('device'))+row('New PC name',g('newPcName'));
   h+=`</div>`;
 
   h+=secHead('Pre-requisites', 0);
@@ -507,7 +513,7 @@ async function submitForm(){
     subject:`Device Installation Sign-off — ${g('userName')} (${g('dept')}) — ${g('jobDate')}`,
     data:{
       techName:g('techName'),jobDate:g('jobDate'),startTime:g('startTime'),endTime:g('endTime'),
-      kmTo:g('kmTo'),kmFrom:g('kmFrom'),userName:g('userName'),userPhone:g('userPhone'),userEmail:g('userEmail'),dept:g('dept'),device:g('device'),notes:g('notes'),
+      kmTo:g('kmTo'),kmFrom:g('kmFrom'),userName:g('userName'),userPhone:g('userPhone'),userEmail:g('userEmail'),dept:g('dept'),device:g('device'),newPcName:g('newPcName'),techSigName:g('techSigName'),supSigName:g('supSigName'),notes:g('notes'),
       preChecks,checklist:st,
       techSig:tCanvas?tCanvas.toDataURL('image/png'):'',
       supSig:sCanvas?sCanvas.toDataURL('image/png'):''
@@ -536,6 +542,9 @@ function resetAll(){
   document.getElementById('sh').textContent='Sign above with your finger or stylus';
   document.querySelectorAll('input:not(#recipEmail),textarea').forEach(i=>{if(i.type!=='date')i.value='';});
   document.getElementById('dept').value='';
+  document.getElementById('newPcName').value='';
+  document.getElementById('techSigName').value='';
+  document.getElementById('supSigName').value='';
   document.getElementById('userPhone').value='';
   document.getElementById('userEmail').value='';
   document.getElementById('jobDate').valueAsDate=new Date();
