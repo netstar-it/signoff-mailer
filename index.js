@@ -7,121 +7,121 @@ app.use(cors({ origin: '*', methods: ['GET','POST','OPTIONS'], allowedHeaders: [
 app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 
-const NAVY  = '#1E3A8A';
-const CYAN  = '#00AEEF';
-const GREY  = '#555555';
-const LIGHT = '#F5F6FA';
-const GREEN = '#16A34A';
-const AMBER = '#D97706';
-
 function buildPDF(data) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 40, info: { Title: 'Netstar Device Installation Sign-off' } });
+    const doc = new PDFDocument({ size: 'A4', margin: 22, info: { Title: 'Netstar Device Installation Sign-off' } });
     const chunks = [];
     doc.on('data', c => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const W = doc.page.width - 80; // usable width
-    const L = 40; // left margin
+    const PW = doc.page.width;
+    const PH = doc.page.height;
+    const L = 22, R = PW - 22;
+    const W = R - L;
+    const NAVY = '#1E3A8A', CYAN = '#00AEEF', GREY = '#555555';
+    const LIGHT = '#F5F6FA', GREEN = '#16A34A', AMBER = '#D97706';
+    let y = 22;
 
-    // ── Header bar ──────────────────────────────────────────────
-    doc.rect(L, 30, W, 70).fill(NAVY);
+    // ── Header ──────────────────────────────────────────────────
+    doc.rect(L, y, W, 46).fill(NAVY);
+    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(16).text('NETSTAR', L+10, y+7);
+    doc.fillColor(CYAN).rect(L+10, y+25, 64, 2).fill();
+    doc.fillColor('#FFFFFF').font('Helvetica').fontSize(6.5).text('A SUBSIDIARY OF ALTRON', L+10, y+30);
+    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(10).text('Device Installation Sign-off', L, y+9, { width: W, align: 'right' });
+    doc.fillColor('rgba(255,255,255,0.65)').font('Helvetica').fontSize(7.5)
+       .text(new Date().toLocaleDateString('en-ZA', { day:'2-digit', month:'long', year:'numeric' }), L, y+23, { width: W, align: 'right' });
+    y += 51;
 
-    // Logo text (since we can't embed image in pdfkit without file path easily)
-    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(22).text('NETSTAR', L + 14, 48);
-    doc.fillColor(CYAN).rect(L + 14, 72, 90, 3).fill();
-    doc.fillColor('#FFFFFF').font('Helvetica').fontSize(8).text('A SUBSIDIARY OF ALTRON', L + 14, 78);
-
-    // Title right side
-    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(13)
-       .text('Device Installation Sign-off', L, 45, { width: W, align: 'right' });
-    doc.fillColor('rgba(255,255,255,0.7)').font('Helvetica').fontSize(9)
-       .text(new Date().toLocaleDateString('en-ZA', { day: '2-digit', month: 'long', year: 'numeric' }), L, 64, { width: W, align: 'right' });
-
-    let y = 118;
-
-    // ── Section helper ───────────────────────────────────────────
-    function sectionHeader(title) {
-      doc.rect(L, y, W, 20).fill(NAVY);
-      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(8)
-         .text(title.toUpperCase(), L + 8, y + 6);
-      y += 24;
+    // ── Helpers ──────────────────────────────────────────────────
+    function secHdr(title) {
+      doc.rect(L, y, W, 13).fill(NAVY);
+      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(6.5).text(title.toUpperCase(), L+6, y+3.5);
+      y += 16;
     }
 
-    // ── Table row helper ─────────────────────────────────────────
-    function tableRow(label, value, shade) {
-      const rowH = 20;
-      if (shade) doc.rect(L, y, W, rowH).fill(LIGHT);
-      doc.rect(L, y, W, rowH).stroke('#E0E2EA');
-      doc.fillColor(GREY).font('Helvetica').fontSize(9)
-         .text(label, L + 8, y + 6, { width: W * 0.38 });
-      doc.fillColor('#1a1a1a').font('Helvetica-Bold').fontSize(9)
-         .text(value || '—', L + W * 0.4, y + 6, { width: W * 0.58 });
-      y += rowH;
-    }
-
-    // ── Checklist row ────────────────────────────────────────────
-    function checkRow(label, status, shade) {
-      const rowH = 20;
-      if (shade) doc.rect(L, y, W, rowH).fill(LIGHT);
-      doc.rect(L, y, W, rowH).stroke('#E0E2EA');
-      doc.fillColor('#1a1a1a').font('Helvetica').fontSize(9)
-         .text(label, L + 8, y + 6, { width: W * 0.72 });
-
-      // Badge
-      let bgColor, txtColor, txt;
-      if (status === 'dn')      { bgColor='#DCFCE7'; txtColor=GREEN;  txt='✓ Installed'; }
-      else if (status === 'na') { bgColor='#F0F0F5'; txtColor='#888'; txt='N/A'; }
-      else                      { bgColor='#FEF3C7'; txtColor=AMBER;  txt='Pending'; }
-
-      const bx = L + W - 72, bw = 65, bh = 14, by = y + 3;
-      doc.rect(bx, by, bw, bh).fill(bgColor);
-      doc.fillColor(txtColor).font('Helvetica-Bold').fontSize(8)
-         .text(txt, bx, by + 3, { width: bw, align: 'center' });
-      y += rowH;
-    }
-
-    // ── Job details ──────────────────────────────────────────────
-    sectionHeader('Installation Details');
-    tableRow('Technician', data.techName, false);
-    tableRow('Date', data.jobDate, true);
-    tableRow('User', data.userName, false);
-    tableRow('Department', data.dept, true);
-    tableRow('Device', data.device, false);
-    if (data.userPhone && data.userPhone !== '—') tableRow('User contact', data.userPhone, false);
-    if (data.userEmail && data.userEmail !== '—') tableRow('User email', data.userEmail, true);
-    if (data.startTime && data.startTime !== '—') tableRow('Start time', data.startTime, false);
-    if (data.endTime && data.endTime !== '—') tableRow('End time', data.endTime, true);
-    if (data.kmTo && data.kmTo !== '—') tableRow('KMs to site', data.kmTo + ' km', false);
-    if (data.kmFrom && data.kmFrom !== '—') tableRow('KMs from site', data.kmFrom + ' km', true);
-    if (data.notes && data.notes !== '—') tableRow('Notes', data.notes, false);
-    y += 8;
-
-    // ── Pre-requisites ───────────────────────────────────────────
-    sectionHeader('Pre-requisites');
-    const preLabels = ['OneDrive backup confirmed', 'User PST files backed up'];
-    preLabels.forEach((lbl, i) => {
-      const done = data.preChecks && data.preChecks[i];
-      const rowH = 20;
-      if (i % 2 === 1) doc.rect(L, y, W, rowH).fill(LIGHT);
-      doc.rect(L, y, W, rowH).stroke('#E0E2EA');
-      doc.fillColor('#1a1a1a').font('Helvetica').fontSize(9).text(lbl, L + 8, y + 6);
-      const bx = L + W - 72, bw = 65, bh = 14, by = y + 3;
-      if (done) {
-        doc.rect(bx, by, bw, bh).fill('#DCFCE7');
-        doc.fillColor(GREEN).font('Helvetica-Bold').fontSize(8).text('✓ Done', bx, by + 3, { width: bw, align: 'center' });
-      } else {
-        doc.rect(bx, by, bw, bh).fill('#FEF3C7');
-        doc.fillColor(AMBER).font('Helvetica-Bold').fontSize(8).text('Pending', bx, by + 3, { width: bw, align: 'center' });
+    function twoColDetail(pairs) {
+      const cw = (W - 2) / 2;
+      const rows = Math.ceil(pairs.length / 2);
+      for (let i = 0; i < rows; i++) {
+        const left  = pairs[i * 2];
+        const right = pairs[i * 2 + 1];
+        const rh = 12, shade = i % 2 === 1;
+        [0, 1].forEach(col => {
+          const item = col === 0 ? left : right;
+          const x = col === 0 ? L : L + cw + 2;
+          if (!item) return;
+          if (shade) doc.rect(x, y, cw, rh).fill(LIGHT);
+          doc.rect(x, y, cw, rh).stroke('#E0E2EA');
+          doc.fillColor(GREY).font('Helvetica').fontSize(6.5).text(item[0], x+4, y+3, { width: cw * 0.38 });
+          doc.fillColor('#111').font('Helvetica-Bold').fontSize(6.5).text(item[1]||'—', x + cw*0.4, y+3, { width: cw*0.57 });
+        });
+        y += rh;
       }
-      y += rowH;
-    });
-    y += 8;
+    }
 
-    // ── Software checklist ───────────────────────────────────────
+    function preRow(label, done, shade) {
+      const rh = 12;
+      if (shade) doc.rect(L, y, W, rh).fill(LIGHT);
+      doc.rect(L, y, W, rh).stroke('#E0E2EA');
+      doc.fillColor('#111').font('Helvetica').fontSize(7).text(label, L+5, y+3, { width: W - 55 });
+      const bx = L + W - 48, bw = 44, bh = 8, by = y + 2;
+      const bg = done ? '#DCFCE7' : '#FEF3C7';
+      const tc = done ? GREEN : AMBER;
+      const txt = done ? '✓ Done' : 'Pending';
+      doc.rect(bx, by, bw, bh).fill(bg);
+      doc.fillColor(tc).font('Helvetica-Bold').fontSize(6.5).text(txt, bx, by+1.5, { width: bw, align: 'center' });
+      y += rh;
+    }
+
+    function clTwoCol(items, dept) {
+      const cw = (W - 2) / 2;
+      const half = Math.ceil(items.length / 2);
+      for (let i = 0; i < half; i++) {
+        const rh = 12, shade = i % 2 === 1;
+        const leftItem  = items[i];
+        const rightItem = items[i + half];
+        [leftItem, rightItem].forEach((item, col) => {
+          if (!item) return;
+          const x = col === 0 ? L : L + cw + 2;
+          const s = data.checklist?.[dept]?.[item];
+          if (shade) doc.rect(x, y, cw, rh).fill(LIGHT);
+          doc.rect(x, y, cw, rh).stroke('#E0E2EA');
+          doc.fillColor('#111').font('Helvetica').fontSize(6.5).text(item, x+4, y+3, { width: cw - 52 });
+          const bx = x + cw - 48, bw = 44, bh = 8, by = y + 2;
+          let bg, tc, txt;
+          if (s === 'dn')      { bg = '#DCFCE7'; tc = GREEN;  txt = '✓ Done'; }
+          else if (s === 'na') { bg = '#F0F0F5'; tc = '#888';  txt = 'N/A'; }
+          else                 { bg = '#FEF3C7'; tc = AMBER;  txt = 'Pending'; }
+          doc.rect(bx, by, bw, bh).fill(bg);
+          doc.fillColor(tc).font('Helvetica-Bold').fontSize(6.5).text(txt, bx, by+1.5, { width: bw, align: 'center' });
+        });
+        y += rh;
+      }
+    }
+
+    function sigRow(label, name, sigData) {
+      const rh = 44;
+      doc.rect(L, y, W, rh).stroke('#E0E2EA');
+      doc.fillColor(GREY).font('Helvetica-Bold').fontSize(7).text(label, L+5, y+5);
+      if (name) doc.fillColor('#111').font('Helvetica').fontSize(7).text(name, L+5, y+15);
+      if (sigData && sigData.startsWith('data:image')) {
+        try {
+          const matches = sigData.match(/^data:(image\/\w+);base64,(.+)$/);
+          if (matches) {
+            const buf = Buffer.from(matches[2], 'base64');
+            doc.image(buf, L + W * 0.3, y + 3, { fit: [W * 0.65, 38] });
+          }
+        } catch(e) {
+          doc.fillColor('#aaa').font('Helvetica').fontSize(7).text('Signature captured', L + W*0.3, y+18);
+        }
+      }
+      y += rh;
+    }
+
+    // ── DEPTS ────────────────────────────────────────────────────
     const DEPTS = {
-      "Common (all devices)":["Office: Outlook","Teams","OneDrive","VPN","Printer","Company Portal (O365)","Intune","N-able"],
+      "Common (all devices)":["Office: Outlook","Teams","OneDrive","VPN","Printer","Company Portal (O365)","Intune","N-able","BitLocker enabled"],
       "Customer Service":["Ocular","3CX","Noms","Search Utilities","CRM and AX"],
       "Finance":["Ocular","3CX","CRM and AX","New Z drive (differs per user)"],
       "Sales":["Ask supervisor / manager"],
@@ -137,72 +137,91 @@ function buildPDF(data) {
     const depts = ["Common (all devices)"];
     if (data.dept && !depts.includes(data.dept)) depts.push(data.dept);
 
-    sectionHeader('Software Installation Checklist');
+    // ── Job Details ──────────────────────────────────────────────
+    secHdr('Installation Details');
+    twoColDetail([
+      ['Technician', data.techName],       ['User', data.userName],
+      ['Date', data.jobDate],              ['Contact', data.userPhone],
+      ['Start time', data.startTime],      ['User email', data.userEmail],
+      ['End time', data.endTime],          ['Department', data.dept],
+      ['KMs to site', (data.kmTo||'—')+' km'], ['Device', data.device],
+      ['KMs from site', (data.kmFrom||'—')+' km'], ['New PC name', data.newPcName],
+    ]);
+    if (data.notes && data.notes !== '—') {
+      doc.rect(L, y, W, 12).stroke('#E0E2EA');
+      doc.fillColor(GREY).font('Helvetica').fontSize(6.5).text('Notes', L+4, y+3, { width: W*0.18 });
+      doc.fillColor('#111').font('Helvetica-Bold').fontSize(6.5).text(data.notes, L+W*0.2, y+3, { width: W*0.78 });
+      y += 12;
+    }
+    y += 3;
+
+    // ── Pre-requisites ───────────────────────────────────────────
+    const preLabels = ['OneDrive backup confirmed', 'User PST files backed up', 'Device joined to Azure / Entra', 'Windows 11 compatible'];
+    const cw2 = (W - 2) / 2;
+    secHdr('Pre-requisites');
+    for (let i = 0; i < 2; i++) {
+      const shade = i % 2 === 1;
+      [0, 1].forEach(col => {
+        const idx = i * 2 + col;
+        const x = col === 0 ? L : L + cw2 + 2;
+        const lbl = preLabels[idx];
+        const done = data.preChecks && data.preChecks[idx];
+        if (shade) doc.rect(x, y, cw2, 12).fill(LIGHT);
+        doc.rect(x, y, cw2, 12).stroke('#E0E2EA');
+        doc.fillColor('#111').font('Helvetica').fontSize(6.5).text(lbl, x+4, y+3, { width: cw2 - 52 });
+        const bx = x+cw2-48, bh=8, by=y+2;
+        const bg = done?'#DCFCE7':'#FEF3C7', tc = done?GREEN:AMBER, txt = done?'✓ Done':'Pending';
+        doc.rect(bx,by,44,bh).fill(bg);
+        doc.fillColor(tc).font('Helvetica-Bold').fontSize(6.5).text(txt,bx,by+1.5,{width:44,align:'center'});
+      });
+      y += 12;
+    }
+    y += 3;
+
+    // ── Software Checklist ───────────────────────────────────────
+    secHdr('Software Installation Checklist');
     depts.forEach(dept => {
       const items = DEPTS[dept] || [];
       if (!items.length) return;
-
-      // Check if we need a new page
-      if (y + (items.length + 1) * 20 > doc.page.height - 120) {
-        doc.addPage();
-        y = 40;
-      }
-
-      // Sub-section label
-      doc.rect(L, y, W, 18).fill('#E8EAF2');
-      doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(8).text(dept, L + 8, y + 5);
-      y += 18;
-
-      items.forEach((item, i) => {
-        if (y > doc.page.height - 100) { doc.addPage(); y = 40; }
-        const status = data.checklist && data.checklist[dept] && data.checklist[dept][item];
-        checkRow(item, status, i % 2 === 1);
-      });
-      y += 4;
+      doc.rect(L, y, W, 11).fill('#E8EAF2');
+      doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(6.5).text(dept, L+5, y+3);
+      y += 11;
+      clTwoCol(items, dept);
+      y += 2;
     });
-
-    y += 8;
+    y += 3;
 
     // ── Signatures ───────────────────────────────────────────────
-    if (y + 100 > doc.page.height - 60) { doc.addPage(); y = 40; }
-    sectionHeader('Signatures');
-
-    const sigLabels = ['Technician', 'Supervisor'];
-    const sigData   = [data.techSig, data.supSig];
-
-    sigLabels.forEach((lbl, i) => {
-      const rowH = 70;
-      if (y + rowH > doc.page.height - 60) { doc.addPage(); y = 40; }
-      if (i % 2 === 1) doc.rect(L, y, W, rowH).fill(LIGHT);
-      doc.rect(L, y, W, rowH).stroke('#E0E2EA');
-      doc.fillColor(GREY).font('Helvetica-Bold').fontSize(9).text(lbl, L + 8, y + 8);
-
-      if (sigData[i] && sigData[i].startsWith('data:image')) {
-        try {
-          const matches = sigData[i].match(/^data:(image\/\w+);base64,(.+)$/);
-          if (matches) {
-            const imgBuf = Buffer.from(matches[2], 'base64');
-            doc.image(imgBuf, L + W * 0.35, y + 7, { fit: [200, 54] });
-          } else {
-            throw new Error('bad data URI');
-          }
-        } catch(e) {
-          doc.fillColor('#aaa').font('Helvetica').fontSize(8).text('Signature captured digitally', L + W * 0.35, y + 28);
-        }
-      } else {
-        doc.fillColor('#aaa').font('Helvetica').fontSize(8).text('No signature provided', L + W * 0.35, y + 28);
-      }
-      y += rowH;
-    });
-
-    y += 12;
+    secHdr('Signatures');
+    const sigCw = (W - 2) / 2;
+    const sigH = 48;
+    // Left - Technician
+    doc.rect(L, y, sigCw, sigH).stroke('#E0E2EA');
+    doc.fillColor(GREY).font('Helvetica-Bold').fontSize(7).text('Technician', L+5, y+4);
+    if (data.techSigName) doc.fillColor('#111').font('Helvetica').fontSize(7).text(data.techSigName, L+5, y+14);
+    if (data.techSig && data.techSig.startsWith('data:image')) {
+      try {
+        const m = data.techSig.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (m) doc.image(Buffer.from(m[2],'base64'), L + sigCw*0.35, y+3, { fit: [sigCw*0.62, 42] });
+      } catch(e) {}
+    }
+    // Right - Supervisor/User
+    doc.rect(L + sigCw + 2, y, sigCw, sigH).stroke('#E0E2EA');
+    doc.fillColor(GREY).font('Helvetica-Bold').fontSize(7).text('Supervisor / User', L+sigCw+7, y+4);
+    if (data.supSigName) doc.fillColor('#111').font('Helvetica').fontSize(7).text(data.supSigName, L+sigCw+7, y+14);
+    if (data.supSig && data.supSig.startsWith('data:image')) {
+      try {
+        const m = data.supSig.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (m) doc.image(Buffer.from(m[2],'base64'), L+sigCw+2+sigCw*0.35, y+3, { fit: [sigCw*0.62, 42] });
+      } catch(e) {}
+    }
+    y += sigH + 3;
 
     // ── Footer ───────────────────────────────────────────────────
-    const footerY = doc.page.height - 50;
-    doc.rect(L, footerY, W, 28).fill(NAVY);
-    doc.fillColor('rgba(255,255,255,0.7)').font('Helvetica').fontSize(8)
-       .text(`Netstar — A Subsidiary of Altron  ·  Both parties have signed off digitally  ·  Generated: ${new Date().toLocaleString('en-ZA')}`,
-         L, footerY + 10, { width: W, align: 'center' });
+    doc.rect(L, PH-20, W, 14).fill(NAVY);
+    doc.fillColor('rgba(255,255,255,0.65)').font('Helvetica').fontSize(6.5)
+       .text(`Netstar — A Subsidiary of Altron  ·  Both parties signed digitally  ·  ${new Date().toLocaleString('en-ZA')}`,
+         L, PH-15, { width: W, align: 'center' });
 
     doc.end();
   });
@@ -210,9 +229,7 @@ function buildPDF(data) {
 
 app.post('/send', async (req, res) => {
   const { to, toName, subject, data } = req.body;
-  if (!to || !subject || !data) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
+  if (!to || !subject || !data) return res.status(400).json({ error: 'Missing required fields' });
 
   let pdfBase64 = '';
   try {
@@ -230,13 +247,16 @@ app.post('/send', async (req, res) => {
     sender: { name: process.env.FROM_NAME || 'IT Department', email: process.env.FROM_EMAIL },
     to: [{ email: to, name: toName || to }],
     subject,
-    htmlContent: `<div style="font-family:sans-serif;padding:20px;">
-      <h2 style="color:#1E3A8A;">Device Installation Sign-off Complete</h2>
-      <p>Hi,</p>
-      <p>Please find attached the completed device installation sign-off report for <strong>${data.userName}</strong> (${data.dept}) dated ${data.jobDate}.</p>
-      <p>The checklist has been completed and both the technician and supervisor have signed off digitally.</p>
-      <br/>
-      <p style="color:#888;font-size:12px;">Netstar — A Subsidiary of Altron</p>
+    htmlContent: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;">
+      <div style="background:#1E3A8A;padding:18px 22px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:16px;">Device Installation Sign-off</h2>
+        <p style="color:rgba(255,255,255,.65);margin:4px 0 0;font-size:12px;">${new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'})}</p>
+      </div>
+      <div style="border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;padding:18px 22px;">
+        <p style="font-size:14px;color:#333;">Please find attached the completed sign-off report for <strong>${data.userName}</strong> (${data.dept}) dated ${data.jobDate}.</p>
+        <p style="font-size:13px;color:#555;margin-top:10px;">The installation checklist has been completed and both parties have signed off digitally.</p>
+        <p style="font-size:11px;color:#aaa;margin-top:18px;">Netstar — A Subsidiary of Altron &nbsp;·&nbsp; IT Department</p>
+      </div>
     </div>`,
     attachment: [{ content: pdfBase64, name: filename }]
   };
