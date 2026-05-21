@@ -9,7 +9,7 @@ app.use(express.json({ limit: '10mb' }));
 
 function buildPDF(data) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 22, info: { Title: 'Netstar Device Installation Sign-off' } });
+    const doc = new PDFDocument({ size: 'A4', margin: 22, bufferPages: true, autoFirstPage: true, info: { Title: 'Netstar Device Installation Sign-off' } });
     const chunks = [];
     doc.on('data', c => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -217,11 +217,19 @@ function buildPDF(data) {
     }
     y += sigH + 3;
 
-    // ── Footer ───────────────────────────────────────────────────
-    doc.rect(L, PH-20, W, 14).fill(NAVY);
+    // ── Footer — absolute position, never triggers new page ────
+    // Switch back to page 1 in case content pushed to page 2, draw footer absolutely
+    if (doc.bufferedPageRange().count > 1) {
+      // Remove extra page by switching back
+      doc.switchToPage(0);
+    }
+    doc.save();
+    // Draw footer at absolute bottom of page 1
+    doc.rect(L, PH-22, W, 16).fill(NAVY);
     doc.fillColor('rgba(255,255,255,0.65)').font('Helvetica').fontSize(6.5)
        .text(`Netstar — A Subsidiary of Altron  ·  Both parties signed digitally  ·  ${new Date().toLocaleString('en-ZA')}`,
-         L, PH-15, { width: W, align: 'center' });
+         L, PH-16, { width: W, align: 'center', lineBreak: false });
+    doc.restore();
 
     doc.end();
   });
