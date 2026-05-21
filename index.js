@@ -218,19 +218,23 @@ function buildPDF(data) {
     y += sigH + 3;
 
     // ── Footer — absolute position, never triggers new page ────
-    // Switch back to page 1 in case content pushed to page 2, draw footer absolutely
-    if (doc.bufferedPageRange().count > 1) {
-      // Remove extra page by switching back
-      doc.switchToPage(0);
-    }
+    // ── Footer ──────────────────────────────────────────────────
+    // Switch to page 0 in case blank page 2 was created, draw navy bar + text
+    // using _y override so PDFKit never triggers another page
+    if (doc.bufferedPageRange().count > 1) doc.switchToPage(0);
+    const fY = doc.page.height - 18;
     doc.save();
-    // Draw footer at absolute bottom of page 1
-    doc.rect(L, PH-22, W, 16).fill(NAVY);
-    doc.fillColor('rgba(255,255,255,0.65)').font('Helvetica').fontSize(6.5)
-       .text(`Netstar — A Subsidiary of Altron  ·  Both parties signed digitally  ·  ${new Date().toLocaleString('en-ZA')}`,
-         L, PH-16, { width: W, align: 'center', lineBreak: false });
+    doc.rect(L, fY, W, 13).fill(NAVY);
+    doc.fillColor('rgba(255,255,255,0.65)').font('Helvetica').fontSize(6);
+    // Override internal y pointer so text() won't push past page boundary
+    doc._y = fY + 3;
+    doc.page.margins.bottom = 0; // disable bottom margin check
+    doc.text(
+      `Netstar — A Subsidiary of Altron  ·  Signed digitally  ·  ${new Date().toLocaleDateString('en-ZA')}`,
+      L + 4, fY + 3,
+      { width: W - 8, align: 'center', lineBreak: false, continued: false }
+    );
     doc.restore();
-
     doc.end();
   });
 }
